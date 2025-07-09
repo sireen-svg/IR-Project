@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Clinical Trials Search</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <form id="search-form">
+            <div style="width: 100%">
+                <input style="width: 100%" type="text" id="query" placeholder="Enter your query..." required>
+            </div>
+            <input type="number" id="query_id" placeholder="Enter your query id" required>
+            <select id="method">
+                <option value="tfidf">TF-IDF</option>
+                <option value="word2vec">Word2Vec</option>
+                <option value="hybrid" selected>Hybrid</option>
+            </select>
+            <select id="dataset">
+                <option value="clinical" selected>Clinical</option>
+                <option value="cord19">Cord 19</option>
+            </select>
+            <label>
+                <input type="checkbox" id="topic"> Use Topic Detection
+            </label>
+            <button type="submit">Search</button>
+        </form>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        document.getElementById("search-form").addEventListener("submit", async function(e) {
+            e.preventDefault();
+
+            const query = document.getElementById("query").value;
+            const query_id = document.getElementById("query_id").value;
+            const method = document.getElementById("method").value;
+            const dataset = document.getElementById("dataset").value;
+            const use_topic = document.getElementById("topic").checked;
+
+            const payload = {
+                query: query,
+                query_id: query_id, // optional or changeable
+                top_n: 10,
+                mode: method,
+                dataset: dataset,
+                use_topic_filter: use_topic
+            };
+
+            const response = await fetch("/search", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+            const container = document.getElementById("results");
+            container.innerHTML = `<h3>Results (Precision: ${data.precision.toFixed(2)})</h3>`;
+
+            data.retrieved_documents.forEach(doc => {
+                container.innerHTML += `
+                    <div class="result">
+                        <strong>${doc.title}</strong><br>
+                        <p>${doc.summary}</p>
+                        <p><em>${doc.description.slice(0, 200)}...</em></p>
+                        <small>Similarity: ${doc.similarity.toFixed(3)}</small>
+                    </div>
+                    <hr>`;
+            });
+        });
+    </script>
+</body>
+</html>
